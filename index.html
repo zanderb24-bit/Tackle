@@ -7,8 +7,6 @@
   <style>
     :root{
       --bg:#0b0f14;
-      --panel:#101826;
-      --panel2:#0e1522;
       --text:#d6e2ff;
       --muted:#8aa0c6;
       --accent:#4da3ff;
@@ -31,10 +29,7 @@
       justify-content:space-between;
       gap:12px;
     }
-    header .title{
-      font-weight:700;
-      letter-spacing:.2px;
-    }
+    header .title{font-weight:700; letter-spacing:.2px;}
     header .hint{color:var(--muted); font-size:12px}
 
     .wrap{
@@ -114,9 +109,33 @@
     }
     .players .small{color:var(--muted); font-size:12px}
 
+    .toolbar{
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+      background: rgba(0,0,0,.10);
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      align-items:end;
+    }
+    .toolbar label{display:block; font-size:11px; color:var(--muted); margin:0 0 6px 2px}
+    .toolbar input{
+      width:100%;
+      padding:9px 10px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background: rgba(10,15,23,.75);
+      color:var(--text);
+      outline:none;
+      font-family: inherit;
+      font-size:12px;
+    }
+    .toolbar input:focus{border-color: rgba(77,163,255,.6)}
+    .toolbar .wide{grid-column: 1 / span 2; display:flex; gap:10px;}
+
     .list{
       padding:10px 12px;
-      max-height: 160px;
+      max-height: 180px;
       overflow:auto;
       border-bottom:1px solid var(--line);
     }
@@ -131,12 +150,10 @@
     }
     .row:hover{background: rgba(255,255,255,.03)}
     .row.sel{border-color: rgba(77,163,255,.45); background: rgba(77,163,255,.08)}
-    .badge{
-      width:14px;height:14px;border-radius:4px;
-      border:1px solid rgba(255,255,255,.18);
-    }
+    .badge{width:14px;height:14px;border-radius:4px;border:1px solid rgba(255,255,255,.18);}
     .row .meta{display:flex; gap:10px; align-items:center; min-width:0}
-    .row .meta span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .row .meta .name{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 180px}
+    .row .meta .sub{color:var(--muted); font-size:12px}
     .row .actions{display:flex; gap:8px; align-items:center}
     .mini{
       padding:5px 8px;
@@ -149,11 +166,7 @@
     }
     .mini:hover{color:var(--text)}
 
-    .terminal{
-      display:grid;
-      grid-template-rows: 1fr auto;
-      min-height:0;
-    }
+    .terminal{display:grid; grid-template-rows: 1fr auto; min-height:0;}
     .termOut{
       padding:10px 12px;
       overflow:auto;
@@ -196,7 +209,6 @@
       margin:0 2px;
     }
 
-    /* Scrollbar */
     ::-webkit-scrollbar{height:10px;width:10px}
     ::-webkit-scrollbar-thumb{background:#22314f;border-radius:999px}
     ::-webkit-scrollbar-track{background:#0b0f14}
@@ -211,13 +223,12 @@
 <header>
   <div>
     <div class="title">Rugby Drill Terminal Simulator</div>
-    <div class="hint">Drag players on the pitch. Use terminal commands to record / play / save moves.</div>
+    <div class="hint">Drag players on the pitch. Use terminal commands to record / play / save moves. (Moves are stored by <b>player number</b>.)</div>
   </div>
   <div class="hint">Tips: <span class="k">help</span> <span class="k">add</span> <span class="k">record</span> <span class="k">stop</span> <span class="k">play</span> <span class="k">library</span></div>
 </header>
 
 <div class="wrap">
-  <!-- Field -->
   <div class="card">
     <div class="fieldTop">
       <div class="left">
@@ -237,18 +248,40 @@
     </div>
   </div>
 
-  <!-- Side -->
   <div class="side">
     <div class="card">
       <div class="players">
         <div>
           <div style="font-weight:700">Players</div>
-          <div class="small">Click to select. Drag on pitch to move. Color accepts CSS (e.g. <span class="k">#ff0</span>, <span class="k">red</span>).</div>
+          <div class="small">Clear controls for <b>number</b>, <b>colour</b>, and <b>name</b>. You can still use terminal commands too.</div>
         </div>
         <button class="btn" id="btnAddQuick">+ Quick Add</button>
       </div>
+
+      <div class="toolbar">
+        <div>
+          <label>Number</label>
+          <input id="uiNumber" type="number" min="1" step="1" placeholder="e.g. 10" />
+        </div>
+        <div>
+          <label>Colour</label>
+          <input id="uiColor" type="text" placeholder="e.g. #4da3ff or red" />
+        </div>
+        <div class="wide">
+          <div style="flex:1">
+            <label>Name</label>
+            <input id="uiName" type="text" placeholder="e.g. Fly-half" />
+          </div>
+          <div style="display:flex; gap:10px; align-items:flex-end; padding-bottom:1px;">
+            <button class="btn" id="btnApply">Apply to Selected</button>
+            <button class="btn ok" id="btnAddFromFields">Add</button>
+          </div>
+        </div>
+      </div>
+
       <div class="list" id="playerList"></div>
-      <div class="terminal" style="height: 380px">
+
+      <div class="terminal" style="height: 360px">
         <div class="termOut" id="termOut"></div>
         <div class="termIn">
           <input id="termInput" type="text" autocomplete="off" spellcheck="false" placeholder="Type a command… (try: help)" />
@@ -263,13 +296,12 @@
 
 <script>
 (() => {
-  // ---------------------------
-  // Utilities
-  // ---------------------------
   const $ = (id) => document.getElementById(id);
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   const now = () => performance.now();
   const fmt = (n) => (Number.isFinite(n) ? n.toFixed(0) : String(n));
+
+  const STORAGE_KEY = 'rugby_drill_terminal_moves_v2';
 
   function safeJsonParse(str, fallback){
     try { return JSON.parse(str); } catch { return fallback; }
@@ -286,44 +318,6 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 500);
   }
 
-  // ---------------------------
-  // State
-  // ---------------------------
-  const STORAGE_KEY = 'rugby_drill_terminal_moves_v1';
-
-  /**
-   * Player: { id, number, color, x, y, r }
-   */
-  const state = {
-    players: [],
-    selectedId: null,
-
-    // recording session (unsaved)
-    mode: 'idle', // 'idle' | 'recording' | 'playing'
-    currentMoveName: '(unsaved)',
-    currentMove: null, // { name, createdAt, durationMs, tracks: { [playerId]: [{t,x,y}] } }
-    recordStartT: 0,
-
-    // playback
-    playName: null,
-    playStartT: 0,
-    playDuration: 0,
-    playMove: null,
-
-    library: loadLibrary(), // { [name]: move }
-
-    // dragging
-    drag: { active:false, pid:null, offX:0, offY:0 },
-
-    // visuals
-    dpr: Math.max(1, Math.min(2, window.devicePixelRatio || 1)),
-    pitch: { w: 0, h: 0, pad: 26 },
-
-    // command history
-    hist: [],
-    histIndex: -1,
-  };
-
   function loadLibrary(){
     const raw = localStorage.getItem(STORAGE_KEY);
     const parsed = safeJsonParse(raw, {});
@@ -335,8 +329,33 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.library));
   }
 
+  const state = {
+    players: [],
+    selectedNumber: null,
+
+    mode: 'idle',
+    currentMoveName: '(unsaved)',
+    currentMove: null,
+    recordStartT: 0,
+
+    playName: null,
+    playStartT: 0,
+    playDuration: 0,
+    playMove: null,
+
+    library: loadLibrary(),
+
+    drag: { active:false, pnum:null, offX:0, offY:0 },
+
+    dpr: Math.max(1, Math.min(2, window.devicePixelRatio || 1)),
+    pitch: { w: 0, h: 0, pad: 26 },
+
+    hist: [],
+    histIndex: -1,
+  };
+
   function getSelectedPlayer(){
-    return state.players.find(p => p.id === state.selectedId) || null;
+    return state.players.find(p => p.number === state.selectedNumber) || null;
   }
 
   function setMode(m){
@@ -345,10 +364,11 @@
     $('movePill').textContent = state.currentMoveName;
   }
 
-  function setSelected(pid){
-    state.selectedId = pid;
+  function setSelected(number){
+    state.selectedNumber = number;
     const p = getSelectedPlayer();
-    $('selPill').textContent = p ? `#${p.number}` : 'none';
+    $('selPill').textContent = p ? ('#' + p.number + (p.name ? ' · ' + p.name : '')) : 'none';
+    syncFieldsFromSelected();
     renderPlayerList();
   }
 
@@ -385,9 +405,6 @@
     out.scrollTop = out.scrollHeight;
   }
 
-  // ---------------------------
-  // Canvas / Pitch
-  // ---------------------------
   const canvas = $('field');
   const ctx = canvas.getContext('2d');
 
@@ -400,76 +417,23 @@
     ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
   }
 
-  function drawPitch(){
+  function confineToPitch(p){
     const {w,h,pad} = state.pitch;
-
-    // Background already handled by CSS; draw pitch markings
-    ctx.clearRect(0,0,w,h);
-
-    // Outer lines
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(214,226,255,.20)';
-    ctx.strokeRect(pad, pad, w - pad*2, h - pad*2);
-
-    // Halfway line
-    ctx.beginPath();
-    ctx.moveTo(w/2, pad);
-    ctx.lineTo(w/2, h - pad);
-    ctx.stroke();
-
-    // 22m-ish lines (approx)
-    const a = pad + (w - pad*2) * 0.2;
-    const b = pad + (w - pad*2) * 0.8;
-    ctx.strokeStyle = 'rgba(214,226,255,.14)';
-    ctx.beginPath();
-    ctx.moveTo(a, pad);
-    ctx.lineTo(a, h - pad);
-    ctx.moveTo(b, pad);
-    ctx.lineTo(b, h - pad);
-    ctx.stroke();
-
-    // Light grid
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(214,226,255,.06)';
-    const step = 40;
-    for (let x = pad; x <= w-pad; x += step){
-      ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, h-pad); ctx.stroke();
-    }
-    for (let y = pad; y <= h-pad; y += step){
-      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w-pad, y); ctx.stroke();
-    }
-
-    // Trails (current recording or last played)
-    drawTrails();
-
-    // Players
-    for (const p of state.players){
-      drawPlayer(p);
-    }
+    p.x = clamp(p.x, pad, w - pad);
+    p.y = clamp(p.y, pad, h - pad);
   }
 
-  function drawPlayer(p){
-    const isSel = p.id === state.selectedId;
-
-    // token
-    ctx.beginPath();
-    ctx.fillStyle = p.color;
-    ctx.globalAlpha = 0.95;
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    // outline
-    ctx.lineWidth = isSel ? 3 : 2;
-    ctx.strokeStyle = isSel ? 'rgba(77,163,255,.9)' : 'rgba(214,226,255,.18)';
-    ctx.stroke();
-
-    // number
-    ctx.fillStyle = 'rgba(11,15,20,.95)';
-    ctx.font = 'bold 13px ui-monospace, monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(p.number), p.x, p.y);
+  function withAlpha(cssColor, a){
+    const c = (cssColor || '').trim();
+    if (c.length === 7 && c[0] === '#'){
+      const r = parseInt(c.slice(1,3), 16);
+      const g = parseInt(c.slice(3,5), 16);
+      const b = parseInt(c.slice(5,7), 16);
+      if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)){
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+      }
+    }
+    return c || ('rgba(77,163,255,' + a + ')');
   }
 
   function drawPolyline(points, strokeStyle, width){
@@ -487,68 +451,99 @@
   }
 
   function drawTrails(){
-    // Prefer current recording trail; else show last played move while playing.
     if (state.mode === 'recording' && state.currentMove){
-      for (const pid of Object.keys(state.currentMove.tracks)){
-        const p = state.players.find(pp => pp.id === pid);
-        const color = p?.color || 'rgba(77,163,255,.8)';
-        const pts = state.currentMove.tracks[pid].map(s => ({x:s.x, y:s.y}));
+      for (const num of Object.keys(state.currentMove.tracks)){
+        const p = state.players.find(pp => pp.number === Number(num));
+        const color = p?.color || '#4da3ff';
+        const pts = state.currentMove.tracks[num].map(s => ({x:s.x, y:s.y}));
         drawPolyline(pts, withAlpha(color, 0.55), 4);
       }
       return;
     }
 
     if (state.mode === 'playing' && state.playMove){
-      // Show full path faint, and "so far" stronger
       const tNow = now() - state.playStartT;
-      for (const pid of Object.keys(state.playMove.tracks)){
-        const p = state.players.find(pp => pp.id === pid);
-        const color = p?.color || 'rgba(77,163,255,.8)';
-        const all = state.playMove.tracks[pid];
-        const allPts = all.map(s => ({x:s.x, y:s.y}));
-        drawPolyline(allPts, withAlpha(color, 0.18), 3);
-
-        const soFar = all.filter(s => s.t <= tNow).map(s => ({x:s.x, y:s.y}));
-        drawPolyline(soFar, withAlpha(color, 0.55), 4);
+      for (const num of Object.keys(state.playMove.tracks)){
+        const p = state.players.find(pp => pp.number === Number(num));
+        const color = p?.color || '#4da3ff';
+        const all = state.playMove.tracks[num];
+        drawPolyline(all.map(s => ({x:s.x,y:s.y})), withAlpha(color, 0.18), 3);
+        drawPolyline(all.filter(s => s.t <= tNow).map(s => ({x:s.x,y:s.y})), withAlpha(color, 0.55), 4);
       }
     }
   }
 
-  function withAlpha(cssColor, a){
-    // quick & safe: just return rgba white if parsing fails.
-    // We'll draw by layering using globalAlpha if needed.
-    // For now: use canvas globalAlpha with original color.
-    // But we want per-polyline alpha; easiest: set globalAlpha.
-    // We'll simulate by returning same color and setting globalAlpha externally? Not in current code.
-    // We'll do simple trick: if hex like #rrggbb
-    const c = cssColor.trim();
-    if (/^#([0-9a-fA-F]{6})$/.test(c)){
-      const hex = c.slice(1);
-      const r = parseInt(hex.slice(0,2),16);
-      const g = parseInt(hex.slice(2,4),16);
-      const b = parseInt(hex.slice(4,6),16);
-      return `rgba(${r},${g},${b},${a})`;
+  function drawPlayer(p){
+    const isSel = p.number === state.selectedNumber;
+
+    ctx.beginPath();
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = 0.95;
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.lineWidth = isSel ? 3 : 2;
+    ctx.strokeStyle = isSel ? 'rgba(77,163,255,.9)' : 'rgba(214,226,255,.18)';
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(11,15,20,.95)';
+    ctx.font = 'bold 13px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(p.number), p.x, p.y);
+
+    if (p.name){
+      ctx.font = '11px ui-monospace, monospace';
+      ctx.fillStyle = 'rgba(214,226,255,.85)';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(p.name, p.x, p.y - p.r - 6);
     }
-    if (/^#([0-9a-fA-F]{3})$/.test(c)){
-      const hex = c.slice(1);
-      const r = parseInt(hex[0]+hex[0],16);
-      const g = parseInt(hex[1]+hex[1],16);
-      const b = parseInt(hex[2]+hex[2],16);
-      return `rgba(${r},${g},${b},${a})`;
+  }
+
+  function drawPitch(){
+    const {w,h,pad} = state.pitch;
+    ctx.clearRect(0,0,w,h);
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(214,226,255,.20)';
+    ctx.strokeRect(pad, pad, w - pad*2, h - pad*2);
+
+    ctx.beginPath();
+    ctx.moveTo(w/2, pad);
+    ctx.lineTo(w/2, h - pad);
+    ctx.stroke();
+
+    const a = pad + (w - pad*2) * 0.2;
+    const b = pad + (w - pad*2) * 0.8;
+    ctx.strokeStyle = 'rgba(214,226,255,.14)';
+    ctx.beginPath();
+    ctx.moveTo(a, pad);
+    ctx.lineTo(a, h - pad);
+    ctx.moveTo(b, pad);
+    ctx.lineTo(b, h - pad);
+    ctx.stroke();
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(214,226,255,.06)';
+    const step = 40;
+    for (let x = pad; x <= w-pad; x += step){
+      ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, h-pad); ctx.stroke();
     }
-    // If it's already rgba/hsla, leave it and rely on user
-    return c;
+    for (let y = pad; y <= h-pad; y += step){
+      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w-pad, y); ctx.stroke();
+    }
+
+    drawTrails();
+    for (const p of state.players) drawPlayer(p);
   }
 
   function posFromEvent(ev){
     const rect = canvas.getBoundingClientRect();
-    const x = (ev.clientX - rect.left);
-    const y = (ev.clientY - rect.top);
-    return {x,y};
+    return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
   }
 
   function hitPlayer(x,y){
-    // top-most last
     for (let i = state.players.length - 1; i >= 0; i--){
       const p = state.players[i];
       const dx = x - p.x;
@@ -558,15 +553,21 @@
     return null;
   }
 
-  function confineToPitch(p){
-    const {w,h,pad} = state.pitch;
-    p.x = clamp(p.x, pad, w - pad);
-    p.y = clamp(p.y, pad, h - pad);
+  function seedTrackPoint(playerNumber){
+    const p = state.players.find(pp => pp.number === Number(playerNumber));
+    if (!p || !state.currentMove) return;
+
+    const key = String(p.number);
+    if (!state.currentMove.tracks[key]) state.currentMove.tracks[key] = [];
+
+    const t = now() - state.recordStartT;
+    const arr = state.currentMove.tracks[key];
+    const last = arr[arr.length - 1];
+    if (!last || Math.hypot(last.x - p.x, last.y - p.y) > 0.5){
+      arr.push({t, x:p.x, y:p.y});
+    }
   }
 
-  // ---------------------------
-  // Moves (record / play)
-  // ---------------------------
   function startRecording(){
     if (!getSelectedPlayer()){
       log('No player selected. Click a player in the list or on the pitch, then try again.', 'bad');
@@ -579,27 +580,12 @@
       name: null,
       createdAt: new Date().toISOString(),
       durationMs: 0,
-      tracks: {}, // { [pid]: [{t,x,y}] }
+      tracks: {},
     };
     state.recordStartT = now();
     setMode('recording');
-    log(`Recording started. Drag players to record trails. Stop with: stop <moveName>`, 'ok');
-
-    // seed selected player point
-    seedTrackPoint(getSelectedPlayer().id);
-  }
-
-  function seedTrackPoint(pid){
-    const p = state.players.find(pp => pp.id === pid);
-    if (!p) return;
-    if (!state.currentMove.tracks[pid]) state.currentMove.tracks[pid] = [];
-    const t = now() - state.recordStartT;
-    const arr = state.currentMove.tracks[pid];
-    // avoid duplicates
-    const last = arr[arr.length - 1];
-    if (!last || Math.hypot(last.x - p.x, last.y - p.y) > 0.5){
-      arr.push({t, x:p.x, y:p.y});
-    }
+    log('Recording started. Drag players to record trails. Stop with: stop <moveName>', 'ok');
+    seedTrackPoint(getSelectedPlayer().number);
   }
 
   function stopRecording(name){
@@ -607,8 +593,7 @@
       log('Not currently recording. Use: record', 'bad');
       return;
     }
-    const duration = now() - state.recordStartT;
-    state.currentMove.durationMs = Math.max(0, Math.floor(duration));
+    state.currentMove.durationMs = Math.max(0, Math.floor(now() - state.recordStartT));
 
     const moveName = (name || '').trim();
     if (!moveName){
@@ -616,7 +601,6 @@
       return;
     }
 
-    // ensure at least 2 points for selected player
     const anyTracks = Object.keys(state.currentMove.tracks).length;
     if (!anyTracks){
       log('No trail recorded. Drag a player while recording.', 'bad');
@@ -629,7 +613,17 @@
 
     state.currentMoveName = moveName;
     setMode('idle');
-    log(`Saved move "${moveName}" (${fmt(state.currentMove.durationMs)}ms). Use: play ${moveName}`, 'ok');
+    log('Saved move "' + moveName + '" (' + fmt(state.currentMove.durationMs) + 'ms). Use: play ' + moveName, 'ok');
+  }
+
+  function computeMoveDuration(move){
+    let maxT = 0;
+    for (const num of Object.keys(move.tracks || {})){
+      const arr = move.tracks[num];
+      if (!arr || arr.length === 0) continue;
+      maxT = Math.max(maxT, arr[arr.length - 1].t);
+    }
+    return Math.floor(maxT);
   }
 
   function playMove(name){
@@ -640,20 +634,18 @@
     }
     const move = state.library[moveName];
     if (!move){
-      log(`No move named "${moveName}" found. Try: library`, 'bad');
+      log('No move named "' + moveName + '" found. Try: library', 'bad');
       return;
     }
-
     if (state.mode === 'recording'){
       log('Stop recording before playing. Use: stop <name>', 'bad');
       return;
     }
 
-    // Prepare: set players to first points of their tracks
-    for (const pid of Object.keys(move.tracks)){
-      const p = state.players.find(pp => pp.id === pid);
+    for (const num of Object.keys(move.tracks || {})){
+      const p = state.players.find(pp => pp.number === Number(num));
       if (!p) continue;
-      const first = move.tracks[pid][0];
+      const first = move.tracks[num]?.[0];
       if (first){ p.x = first.x; p.y = first.y; confineToPitch(p); }
     }
 
@@ -663,17 +655,7 @@
     state.playStartT = now();
     state.currentMoveName = moveName;
     setMode('playing');
-    log(`Playing "${moveName}". Stop with: stopplay`, 'ok');
-  }
-
-  function computeMoveDuration(move){
-    let maxT = 0;
-    for (const pid of Object.keys(move.tracks)){
-      const arr = move.tracks[pid];
-      if (!arr?.length) continue;
-      maxT = Math.max(maxT, arr[arr.length - 1].t);
-    }
-    return Math.floor(maxT);
+    log('Playing "' + moveName + '". Stop with: stopplay', 'ok');
   }
 
   function stopPlayback(silent=false){
@@ -692,14 +674,12 @@
     if (state.mode !== 'playing' || !state.playMove) return;
     const tNow = now() - state.playStartT;
 
-    // Set each player position by interpolation
-    for (const pid of Object.keys(state.playMove.tracks)){
-      const p = state.players.find(pp => pp.id === pid);
+    for (const num of Object.keys(state.playMove.tracks || {})){
+      const p = state.players.find(pp => pp.number === Number(num));
       if (!p) continue;
-      const track = state.playMove.tracks[pid];
+      const track = state.playMove.tracks[num];
       if (!track || track.length === 0) continue;
 
-      // Find segment
       let i = 0;
       while (i < track.length && track[i].t < tNow) i++;
 
@@ -725,23 +705,20 @@
     }
   }
 
-  // ---------------------------
-  // Players
-  // ---------------------------
-  function addPlayer(number, color){
+  function addPlayer(number, color, name=''){
     const n = Number(number);
     if (!Number.isFinite(n) || n <= 0){
-      log('Player number must be a positive integer. Example: add 12 #ffcc00', 'bad');
+      log('Player number must be a positive integer. Example: add 12 #ffcc00 InsideCentre', 'bad');
       return;
     }
     if (state.players.some(p => p.number === n)){
-      log(`Player #${n} already exists. Use a different number or delete first.`, 'bad');
+      log('Player #' + n + ' already exists.', 'bad');
       return;
     }
     const {w,h,pad} = state.pitch;
     const p = {
-      id: crypto.randomUUID(),
       number: n,
+      name: (name || '').trim(),
       color: (color || '#4da3ff'),
       x: pad + 40 + Math.random() * (Math.max(0, w - pad*2 - 80)),
       y: pad + 40 + Math.random() * (Math.max(0, h - pad*2 - 80)),
@@ -749,45 +726,68 @@
     };
     confineToPitch(p);
     state.players.push(p);
-    setSelected(p.id);
-    log(`Added player #${p.number} (${p.color}).`, 'ok');
+    setSelected(p.number);
+    log('Added player #' + p.number + (p.name ? ' · ' + p.name : '') + ' (' + p.color + ').', 'ok');
   }
 
   function deletePlayer(number){
     const n = Number(number);
     const idx = state.players.findIndex(p => p.number === n);
-    if (idx < 0){
-      log(`No player #${n}.`, 'bad');
-      return;
-    }
-    const pid = state.players[idx].id;
+    if (idx < 0){ log('No player #' + n + '.', 'bad'); return; }
     state.players.splice(idx, 1);
-    if (state.selectedId === pid) setSelected(state.players[0]?.id || null);
-    log(`Deleted player #${n}.`, 'ok');
+    if (state.selectedNumber === n) setSelected(state.players[0]?.number ?? null);
+    log('Deleted player #' + n + '.', 'ok');
   }
 
   function setColor(number, color){
     const n = Number(number);
     const p = state.players.find(pp => pp.number === n);
-    if (!p){ log(`No player #${n}.`, 'bad'); return; }
-    p.color = color || p.color;
-    log(`Player #${n} color set to ${p.color}.`, 'ok');
+    if (!p){ log('No player #' + n + '.', 'bad'); return; }
+    p.color = (color || p.color);
+    log('Player #' + n + ' colour set to ' + p.color + '.', 'ok');
+    renderPlayerList();
+  }
+
+  function setName(number, name){
+    const n = Number(number);
+    const p = state.players.find(pp => pp.number === n);
+    if (!p){ log('No player #' + n + '.', 'bad'); return; }
+    p.name = (name || '').trim();
+    log('Player #' + n + ' name set to "' + (p.name || '(blank)') + '".', 'ok');
+    renderPlayerList();
+    if (state.selectedNumber === n) syncFieldsFromSelected();
+  }
+
+  function renumberPlayer(oldNum, newNum){
+    const a = Number(oldNum);
+    const b = Number(newNum);
+    if (!Number.isFinite(a) || !Number.isFinite(b) || a<=0 || b<=0){
+      log('Usage: renumber <oldNumber> <newNumber>', 'bad');
+      return;
+    }
+    const p = state.players.find(pp => pp.number === a);
+    if (!p){ log('No player #' + a + '.', 'bad'); return; }
+    if (state.players.some(pp => pp.number === b)){
+      log('Cannot renumber: player #' + b + ' already exists.', 'bad');
+      return;
+    }
+    p.number = b;
+    if (state.selectedNumber === a) state.selectedNumber = b;
+    log('Renumbered #' + a + ' → #' + b + '. (Saved moves still reference old numbers.)', 'ok');
+    setSelected(b);
     renderPlayerList();
   }
 
   function selectPlayer(number){
     const n = Number(number);
     const p = state.players.find(pp => pp.number === n);
-    if (!p){ log(`No player #${n}.`, 'bad'); return; }
-    setSelected(p.id);
-    log(`Selected player #${n}.`, 'ok');
+    if (!p){ log('No player #' + n + '.', 'bad'); return; }
+    setSelected(p.number);
+    log('Selected player #' + n + '.', 'ok');
   }
 
   function resetPitch(){
-    if (state.mode === 'recording'){
-      log('Stop recording before reset.', 'bad');
-      return;
-    }
+    if (state.mode === 'recording'){ log('Stop recording before reset.', 'bad'); return; }
     if (state.mode === 'playing') stopPlayback(true);
     const {w,h,pad} = state.pitch;
     for (const p of state.players){
@@ -801,9 +801,113 @@
     log('Pitch reset.', 'ok');
   }
 
-  // ---------------------------
-  // Library ops
-  // ---------------------------
+  function buildLineoutPresets(){
+    const {w,h,pad} = state.pitch;
+    const infield = (u) => pad + (w - pad*2) * u;
+    const downfield = (v) => pad + (h - pad*2) * v;
+
+    const baseX = infield(0.18);
+    const baseY = downfield(0.50);
+
+    const track = (pts, durationMs) => pts.map((p, i) => ({ t: (durationMs * (i/(pts.length-1)))|0, x:p[0], y:p[1] }));
+    const D = 2600;
+
+    const start = {
+      9:  [baseX - 18, baseY + 50],
+      10: [baseX + 30, baseY + 20],
+      12: [baseX + 80, baseY + 10],
+      13: [baseX + 130, baseY + 0],
+      11: [baseX + 170, baseY - 30],
+      14: [baseX + 170, baseY + 40],
+      15: [baseX + 115, baseY - 55],
+    };
+
+    const m1 = {
+      name: 'Lineout: 10-12 Crash',
+      createdAt: new Date().toISOString(),
+      durationMs: D,
+      tracks: {
+        '9':  track([ start[9],  [baseX + 15, baseY + 25], [baseX + 35, baseY + 18] ], D),
+        '10': track([ start[10], [baseX + 55, baseY + 18], [baseX + 75, baseY + 15] ], D),
+        '12': track([ start[12], [baseX + 110, baseY + 12], [baseX + 160, baseY + 18] ], D),
+        '13': track([ start[13], [baseX + 150, baseY + 5],  [baseX + 185, baseY + 2]  ], D),
+        '15': track([ start[15], [baseX + 135, baseY - 40], [baseX + 150, baseY - 28] ], D),
+        '11': track([ start[11], [baseX + 195, baseY - 38], [baseX + 230, baseY - 45] ], D),
+        '14': track([ start[14], [baseX + 195, baseY + 45], [baseX + 235, baseY + 55] ], D),
+      }
+    };
+
+    const m2 = {
+      name: 'Lineout: Out the Back (15)',
+      createdAt: new Date().toISOString(),
+      durationMs: D,
+      tracks: {
+        '9':  track([ start[9],  [baseX + 10, baseY + 30], [baseX + 40, baseY + 22] ], D),
+        '10': track([ start[10], [baseX + 60, baseY + 18], [baseX + 95, baseY + 10] ], D),
+        '12': track([ start[12], [baseX + 120, baseY + 14], [baseX + 145, baseY + 10] ], D),
+        '15': track([ start[15], [baseX + 125, baseY - 30], [baseX + 190, baseY - 5]  ], D),
+        '13': track([ start[13], [baseX + 160, baseY + 4],  [baseX + 210, baseY + 0]  ], D),
+        '11': track([ start[11], [baseX + 205, baseY - 45], [baseX + 260, baseY - 35] ], D),
+        '14': track([ start[14], [baseX + 205, baseY + 55], [baseX + 260, baseY + 45] ], D),
+      }
+    };
+
+    const m3 = {
+      name: 'Lineout: 13 Unders',
+      createdAt: new Date().toISOString(),
+      durationMs: D,
+      tracks: {
+        '9':  track([ start[9],  [baseX + 15, baseY + 30], [baseX + 45, baseY + 22] ], D),
+        '10': track([ start[10], [baseX + 60, baseY + 18], [baseX + 95, baseY + 12] ], D),
+        '12': track([ start[12], [baseX + 120, baseY + 16], [baseX + 170, baseY + 30] ], D),
+        '13': track([ start[13], [baseX + 150, baseY + 6],  [baseX + 165, baseY - 6], [baseX + 210, baseY - 10] ], D),
+        '15': track([ start[15], [baseX + 140, baseY - 45], [baseX + 165, baseY - 35] ], D),
+        '11': track([ start[11], [baseX + 210, baseY - 48], [baseX + 260, baseY - 52] ], D),
+        '14': track([ start[14], [baseX + 210, baseY + 55], [baseX + 260, baseY + 60] ], D),
+      }
+    };
+
+    const m4 = {
+      name: 'Lineout: 15 Wraparound',
+      createdAt: new Date().toISOString(),
+      durationMs: D,
+      tracks: {
+        '9':  track([ start[9],  [baseX + 20, baseY + 25], [baseX + 45, baseY + 18] ], D),
+        '10': track([ start[10], [baseX + 70, baseY + 16], [baseX + 120, baseY + 16] ], D),
+        '15': track([ start[15], [baseX + 105, baseY - 35], [baseX + 125, baseY + 10], [baseX + 185, baseY + 18] ], D),
+        '12': track([ start[12], [baseX + 120, baseY + 14], [baseX + 150, baseY + 10] ], D),
+        '13': track([ start[13], [baseX + 165, baseY + 6],  [baseX + 215, baseY + 4] ], D),
+        '11': track([ start[11], [baseX + 210, baseY - 44], [baseX + 260, baseY - 40] ], D),
+        '14': track([ start[14], [baseX + 210, baseY + 55], [baseX + 260, baseY + 48] ], D),
+      }
+    };
+
+    const m5 = {
+      name: 'Lineout: Screen to Wing (14)',
+      createdAt: new Date().toISOString(),
+      durationMs: D,
+      tracks: {
+        '9':  track([ start[9],  [baseX + 18, baseY + 30], [baseX + 50, baseY + 22] ], D),
+        '10': track([ start[10], [baseX + 65, baseY + 18], [baseX + 105, baseY + 14] ], D),
+        '12': track([ start[12], [baseX + 120, baseY + 16], [baseX + 150, baseY + 12] ], D),
+        '14': track([ start[14], [baseX + 185, baseY + 50], [baseX + 210, baseY + 30], [baseX + 260, baseY + 18] ], D),
+        '13': track([ start[13], [baseX + 165, baseY + 6],  [baseX + 205, baseY + 4] ], D),
+        '11': track([ start[11], [baseX + 210, baseY - 44], [baseX + 260, baseY - 55] ], D),
+        '15': track([ start[15], [baseX + 140, baseY - 45], [baseX + 165, baseY - 35] ], D),
+      }
+    };
+
+    return [m1,m2,m3,m4,m5];
+  }
+
+  function ensurePresetLibrary(){
+    if (Object.keys(state.library).length > 0) return;
+    const presets = buildLineoutPresets();
+    for (const m of presets) state.library[m.name] = m;
+    saveLibrary();
+    log('Preset library added: 5 backs-only lineout attacking shapes. Try: library', 'ok');
+  }
+
   function listLibrary(){
     const names = Object.keys(state.library).sort((a,b) => a.localeCompare(b));
     if (names.length === 0){
@@ -814,34 +918,31 @@
     for (const n of names){
       const m = state.library[n];
       const d = m?.durationMs ?? computeMoveDuration(m);
-      sys(`  - ${n}  (${fmt(d)}ms, tracks: ${Object.keys(m.tracks||{}).length})`);
+      sys('  - ' + n + '  (' + fmt(d) + 'ms, tracks: ' + Object.keys(m.tracks||{}).length + ')');
     }
   }
 
   function deleteMove(name){
     const moveName = (name || '').trim();
     if (!moveName){ log('Provide a move name. Example: del SweepLeft', 'bad'); return; }
-    if (!state.library[moveName]){ log(`No move named "${moveName}".`, 'bad'); return; }
+    if (!state.library[moveName]){ log('No move named "' + moveName + '".', 'bad'); return; }
     delete state.library[moveName];
     saveLibrary();
-    log(`Deleted move "${moveName}".`, 'ok');
+    log('Deleted move "' + moveName + '".', 'ok');
   }
 
   function renameMove(oldName, newName){
     oldName = (oldName||'').trim();
     newName = (newName||'').trim();
-    if (!oldName || !newName){
-      log('Usage: rename <oldName> <newName>', 'bad');
-      return;
-    }
-    if (!state.library[oldName]){ log(`No move named "${oldName}".`, 'bad'); return; }
-    if (state.library[newName]){ log(`"${newName}" already exists.`, 'bad'); return; }
+    if (!oldName || !newName){ log('Usage: rename <oldName> <newName>', 'bad'); return; }
+    if (!state.library[oldName]){ log('No move named "' + oldName + '".', 'bad'); return; }
+    if (state.library[newName]){ log('"' + newName + '" already exists.', 'bad'); return; }
     const m = state.library[oldName];
     delete state.library[oldName];
     m.name = newName;
     state.library[newName] = m;
     saveLibrary();
-    log(`Renamed "${oldName}" → "${newName}".`, 'ok');
+    log('Renamed "' + oldName + '" → "' + newName + '".', 'ok');
   }
 
   function exportLibrary(){
@@ -857,7 +958,6 @@
         log('Import failed: invalid JSON.', 'bad');
         return;
       }
-      // merge
       let added = 0;
       for (const [name, move] of Object.entries(parsed)){
         if (!name || typeof move !== 'object') continue;
@@ -865,43 +965,46 @@
         added++;
       }
       saveLibrary();
-      log(`Imported ${added} move(s) into library.`, 'ok');
+      log('Imported ' + added + ' move(s) into library.', 'ok');
     };
     reader.onerror = () => log('Import failed: could not read file.', 'bad');
     reader.readAsText(file);
   }
 
-  // ---------------------------
-  // Terminal commands
-  // ---------------------------
   const commands = {
     help: {
       run(){
         sys('Commands:');
-        sys('  help                          Show this help');
-        sys('  add <number> <color>           Add player (e.g. add 12 #ffcc00)');
-        sys('  delplayer <number>             Delete a player');
-        sys('  select <number>                Select player');
-        sys('  color <number> <color>         Change player color');
-        sys('  record                         Start recording (drag players)');
-        sys('  stop <moveName>                Stop & save recording');
-        sys('  play <moveName>                Play a saved move');
-        sys('  stopplay                       Stop playback');
-        sys('  library                        List saved moves');
-        sys('  del <moveName>                 Delete a move');
-        sys('  rename <old> <new>             Rename a move');
-        sys('  export                         Download your move library JSON');
-        sys('  import                         Import library JSON (merges)');
-        sys('  reset                          Reset player positions on pitch');
-        sys('  clear                          Clear the terminal output');
-        sys('Shortcuts: ↑/↓ for command history');
+        sys('  help                                   Show this help');
+        sys('  add <number> <colour> [name...]         Add player (e.g. add 12 #ffcc00 InsideCentre)');
+        sys('  delplayer <number>                      Delete a player');
+        sys('  select <number>                         Select player');
+        sys('  colour <number> <colour>                Change player colour');
+        sys('  name <number> <name...>                 Change player name');
+        sys('  renumber <oldNumber> <newNumber>         Change player number');
+        sys('  record                                  Start recording (drag players)');
+        sys('  stop <moveName>                          Stop & save recording');
+        sys('  play <moveName>                          Play a saved move');
+        sys('  stopplay                                 Stop playback');
+        sys('  library                                  List saved moves');
+        sys('  presets                                  Add presets (only if library empty)');
+        sys('  del <moveName>                           Delete a move');
+        sys('  rename <old> <new>                       Rename a move');
+        sys('  export                                   Download your move library JSON');
+        sys('  import                                   Import library JSON (merges)');
+        sys('  reset                                    Reset player positions on pitch');
+        sys('  clear                                    Clear the terminal output');
+        sys('Shortcuts: Up/Down for command history');
       }
     },
 
-    add: { run(args){ addPlayer(args[0], args[1]); } },
+    add: { run(args){ addPlayer(args[0], args[1], args.slice(2).join(' ')); } },
     delplayer: { run(args){ deletePlayer(args[0]); } },
     select: { run(args){ selectPlayer(args[0]); } },
+    colour: { run(args){ setColor(args[0], args[1]); } },
     color: { run(args){ setColor(args[0], args[1]); } },
+    name: { run(args){ setName(args[0], args.slice(1).join(' ')); } },
+    renumber: { run(args){ renumberPlayer(args[0], args[1]); } },
 
     record: { run(){ startRecording(); } },
     stop: { run(args){ stopRecording(args.join(' ')); } },
@@ -910,6 +1013,7 @@
     stopplay: { run(){ stopPlayback(false); } },
 
     library: { run(){ listLibrary(); } },
+    presets: { run(){ ensurePresetLibrary(); } },
     del: { run(args){ deleteMove(args.join(' ')); } },
     rename: { run(args){ renameMove(args[0], args.slice(1).join(' ')); } },
 
@@ -924,32 +1028,64 @@
     const line = (raw || '').trim();
     if (!line) return;
 
-    // history
     state.hist.push(line);
     state.histIndex = state.hist.length;
 
     log(line);
 
-    const parts = line.split(/\s+/);
-    const cmd = parts[0].toLowerCase();
+    const parts = line.split(' ').filter(Boolean);
+    const cmd = (parts[0] || '').toLowerCase();
     const args = parts.slice(1);
 
     const entry = commands[cmd];
     if (!entry){
-      log(`Unknown command: ${cmd}. Try: help`, 'bad');
+      log('Unknown command: ' + cmd + '. Try: help', 'bad');
       return;
     }
 
-    try {
-      entry.run(args);
-    } catch (e){
-      log(`Error: ${e?.message || e}`, 'bad');
-    }
+    try { entry.run(args); }
+    catch (e){ log('Error: ' + (e?.message || e), 'bad'); }
   }
 
-  // ---------------------------
-  // UI: player list
-  // ---------------------------
+  function syncFieldsFromSelected(){
+    const p = getSelectedPlayer();
+    if (!p) return;
+    $('uiNumber').value = String(p.number);
+    $('uiColor').value = p.color;
+    $('uiName').value = p.name || '';
+  }
+
+  function applyFieldsToSelected(){
+    const p = getSelectedPlayer();
+    if (!p){ log('No player selected.', 'bad'); return; }
+
+    const number = Number($('uiNumber').value);
+    const color = $('uiColor').value.trim();
+    const name = $('uiName').value.trim();
+
+    if (Number.isFinite(number) && number > 0 && number !== p.number){
+      if (state.players.some(pp => pp.number === number)){
+        log('Cannot set number: player #' + number + ' already exists.', 'bad');
+      } else {
+        const old = p.number;
+        p.number = number;
+        if (state.selectedNumber === old) state.selectedNumber = number;
+        log('Updated number: #' + old + ' → #' + number, 'ok');
+      }
+    }
+
+    if (color){ p.color = color; log('Updated colour: ' + p.color, 'ok'); }
+    p.name = name;
+    log('Updated name: "' + (p.name || '(blank)') + '"', 'ok');
+
+    setSelected(p.number);
+    renderPlayerList();
+  }
+
+  function addFromFields(){
+    addPlayer($('uiNumber').value, $('uiColor').value, $('uiName').value);
+  }
+
   function renderPlayerList(){
     const list = $('playerList');
     list.innerHTML = '';
@@ -957,7 +1093,7 @@
     if (state.players.length === 0){
       const empty = document.createElement('div');
       empty.className = 'termLine';
-      empty.innerHTML = '<span class="muted">No players yet. Use:</span> <span class="k">add 10 #4da3ff</span>';
+      empty.innerHTML = '<span class="muted">No players yet. Use:</span> <span class="k">add 10 #4da3ff FlyHalf</span>';
       list.appendChild(empty);
       return;
     }
@@ -965,72 +1101,79 @@
     const sorted = [...state.players].sort((a,b)=>a.number-b.number);
     for (const p of sorted){
       const row = document.createElement('div');
-      row.className = 'row' + (p.id === state.selectedId ? ' sel' : '');
+      row.className = 'row' + (p.number === state.selectedNumber ? ' sel' : '');
 
       const meta = document.createElement('div');
       meta.className = 'meta';
+
       const badge = document.createElement('div');
       badge.className = 'badge';
       badge.style.background = p.color;
 
-      const label = document.createElement('span');
-      label.textContent = `#${p.number}`;
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = '#' + p.number + (p.name ? ' · ' + p.name : '');
 
-      const small = document.createElement('span');
-      small.style.color = 'var(--muted)';
-      small.textContent = p.color;
+      const sub = document.createElement('div');
+      sub.className = 'sub';
+      sub.textContent = p.color;
+
+      const stack = document.createElement('div');
+      stack.style.display = 'grid';
+      stack.style.gap = '2px';
+      stack.appendChild(name);
+      stack.appendChild(sub);
 
       meta.appendChild(badge);
-      meta.appendChild(label);
-      meta.appendChild(small);
+      meta.appendChild(stack);
 
       const actions = document.createElement('div');
       actions.className = 'actions';
+
       const selBtn = document.createElement('button');
       selBtn.className = 'mini';
       selBtn.textContent = 'Select';
-      selBtn.onclick = () => setSelected(p.id);
+      selBtn.onclick = () => setSelected(p.number);
+
       const delBtn = document.createElement('button');
       delBtn.className = 'mini';
       delBtn.textContent = 'Delete';
       delBtn.onclick = () => deletePlayer(p.number);
+
       actions.appendChild(selBtn);
       actions.appendChild(delBtn);
 
       row.appendChild(meta);
       row.appendChild(actions);
+
       row.onclick = (ev) => {
         if (ev.target === selBtn || ev.target === delBtn) return;
-        setSelected(p.id);
+        setSelected(p.number);
       };
 
       list.appendChild(row);
     }
   }
 
-  // ---------------------------
-  // Interaction: drag / record
-  // ---------------------------
   function onPointerDown(ev){
-    if (state.mode === 'playing') return; // don't drag during playback
-
+    if (state.mode === 'playing') return;
     canvas.setPointerCapture(ev.pointerId);
     const {x,y} = posFromEvent(ev);
     const hit = hitPlayer(x,y);
     if (!hit) return;
 
-    setSelected(hit.id);
+    setSelected(hit.number);
     state.drag.active = true;
-    state.drag.pid = hit.id;
+    state.drag.pnum = hit.number;
     state.drag.offX = x - hit.x;
     state.drag.offY = y - hit.y;
 
-    if (state.mode === 'recording') seedTrackPoint(hit.id);
+    if (state.mode === 'recording') seedTrackPoint(hit.number);
   }
 
   function onPointerMove(ev){
     if (!state.drag.active) return;
-    const p = state.players.find(pp => pp.id === state.drag.pid);
+    const p = state.players.find(pp => pp.number === state.drag.pnum);
     if (!p) return;
 
     const {x,y} = posFromEvent(ev);
@@ -1038,29 +1181,20 @@
     p.y = y - state.drag.offY;
     confineToPitch(p);
 
-    if (state.mode === 'recording'){
-      seedTrackPoint(p.id);
-    }
+    if (state.mode === 'recording') seedTrackPoint(p.number);
   }
 
-  function onPointerUp(ev){
-    if (!state.drag.active) return;
+  function onPointerUp(){
     state.drag.active = false;
-    state.drag.pid = null;
+    state.drag.pnum = null;
   }
 
-  // ---------------------------
-  // Main loop
-  // ---------------------------
   function frame(){
     stepPlayback();
     drawPitch();
     requestAnimationFrame(frame);
   }
 
-  // ---------------------------
-  // Buttons & terminal input
-  // ---------------------------
   $('btnRun').onclick = () => {
     const inp = $('termInput');
     runCommand(inp.value);
@@ -1109,10 +1243,15 @@
   $('btnAddQuick').onclick = () => {
     const num = prompt('Player number:', '10');
     if (num === null) return;
-    const color = prompt('Player color (CSS):', '#4da3ff');
+    const color = prompt('Player colour (CSS):', '#4da3ff');
     if (color === null) return;
-    runCommand(`add ${num} ${color}`);
+    const name = prompt('Player name (optional):', '');
+    if (name === null) return;
+    runCommand(('add ' + num + ' ' + color + ' ' + name).trim());
   };
+
+  $('btnApply').onclick = () => applyFieldsToSelected();
+  $('btnAddFromFields').onclick = () => addFromFields();
 
   $('fileImport').addEventListener('change', (ev) => {
     const f = ev.target.files?.[0];
@@ -1125,25 +1264,28 @@
   canvas.addEventListener('pointerup', onPointerUp);
   canvas.addEventListener('pointercancel', onPointerUp);
 
-  window.addEventListener('resize', () => {
-    resizeCanvas();
-  });
+  window.addEventListener('resize', () => resizeCanvas());
 
-  // ---------------------------
-  // Boot
-  // ---------------------------
   function boot(){
     resizeCanvas();
+
+    addPlayer(9,  '#8a9bff', 'Scrum-half');
+    addPlayer(10, '#4da3ff', 'Fly-half');
+    addPlayer(12, '#ffcc00', 'Inside centre');
+    addPlayer(13, '#ff5a6a', 'Outside centre');
+    addPlayer(11, '#4dffb8', 'Wing');
+    addPlayer(14, '#b58cff', 'Wing');
+    addPlayer(15, '#ffa24d', 'Fullback');
+
+    setSelected(10);
+
+    ensurePresetLibrary();
+
     renderPlayerList();
 
-    // starter players
-    addPlayer(10, '#4da3ff');
-    addPlayer(12, '#ffcc00');
-    addPlayer(13, '#ff5a6a');
-
-    sys('Welcome. This is a single-file HTML app (no server needed).');
-    sys('Try: help');
+    sys('Welcome. Single-file HTML app (no server needed).');
     sys('Workflow: add players → select → record → drag players → stop <name> → play <name>');
+    sys('Tip: preset library includes 5 backs-only lineout shapes. Type: library');
 
     requestAnimationFrame(frame);
   }
